@@ -145,13 +145,14 @@ function error(...args: any[]) {
             data.log_type !== "abusefilter" && data.log_action !== "hit" ||
 
             // Missing log data for some reason
-            !data.log_params || !data.log_params.log || !data.log_params.filter
-        ) {
-            return;
-        }
+            !data.log_params || !data.log_params.log || !data.log_params.filter ||
 
-        if (FILTERS.length > 0 && !FILTERS.includes(data.log_params.filter)) {
             // Edit was not in filter list.
+            (FILTERS.length > 0 && !FILTERS.includes(data.log_params.filter)) ||
+            
+            // Already processed this event
+            (savedLastEventId && JSON.parse(savedLastEventId).offset == data.meta.offset)
+        ) {
             return;
         }
 
