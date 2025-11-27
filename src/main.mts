@@ -129,8 +129,7 @@ function error(...args: any[]) {
             'User-Agent': USER_AGENT
         },
         autoStart: false,
-        reopenOnClose: true,
-        lastEventId: savedLastEventId ? JSON.parse(savedLastEventId) : undefined
+        reopenOnClose: true
     });
 
     stream.on("mediawiki.recentchange", async (data) => {
@@ -151,7 +150,7 @@ function error(...args: any[]) {
             (FILTERS.length > 0 && !FILTERS.includes(data.log_params.filter)) ||
             
             // Already processed this event
-            (savedLastEventId && JSON.parse(savedLastEventId).offset == data.meta.offset)
+            (savedLastEventId && JSON.parse(savedLastEventId)[0].offset == data.meta.offset)
         ) {
             return;
         }
@@ -278,11 +277,18 @@ function error(...args: any[]) {
 
     stream.on("error", (err) => {
         error("Stream error:", err);
+        if (err.message.includes("Too Many Requests")) {
+            warn("Rate limited; waiting 60 seconds before reopening stream...");
+            setTimeout(async () => {
+                log("Reopening stream after rate limit...");
+                await stream.close();
+                await stream.open();
+            }, 60000);
+        }
     });
 
     stream.on("close", () => {
-        log("Stream closed. Reopening...");
-        stream.open();
+        log("Stream closed.");
     });
 
     postInterval = setInterval(post, 100);
@@ -295,5 +301,7 @@ function error(...args: any[]) {
         process.exit(0);
     });
 
-    await stream.open();
+    await stream.open({
+        lastEventId: savedLastEventId ? JSON.parse(savedLastEventId) : undefined
+    });
 })();
