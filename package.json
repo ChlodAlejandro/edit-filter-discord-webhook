@@ -1,0 +1,11 @@
+{
+  "name": "afc-discord",
+  "dependencies": {
+    "wikimedia-streams": "^3.0.0"
+  },
+  "devDependencies": {
+    "@types/eventsource": "^1.1.15",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
+  }
+}
