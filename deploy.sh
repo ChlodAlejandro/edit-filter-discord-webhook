@@ -1,1 +1,0 @@
-toolforge jobs delete afc && toolforge jobs run afc --image node20 --command "node --enable-source-maps ~/afc/dist/main.mjs" --emails onfailure --mount all --continuous && tail -f ~/afc.out ~/afc.err

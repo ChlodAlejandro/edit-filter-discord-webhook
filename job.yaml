@@ -1,0 +1,5 @@
+- command: node --enable-source-maps ~/afc/dist/main.mjs
+  continuous: true
+  emails: onfailure
+  image: node20
+  name: afc
