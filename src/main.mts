@@ -27,6 +27,7 @@
 import WikimediaStream from "wikimedia-streams";
 import type { WikimediaEventStreamEventTypes } from "wikimedia-streams";
 import * as fs from "fs/promises";
+import { diff } from "util";
 
 function log(...args: any[]) {
     console.log(`[${new Date().toISOString()}]`, ...args);
@@ -37,6 +38,25 @@ function warn(...args: any[]) {
 function error(...args: any[]) {
     console.error(`[${new Date().toUTCString()}]`, ...args);
 }
+
+const embed = {
+    add: {
+        color: 0x00AF89,
+        icon_url: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/ab/MobileFrontend_bytes-added.svg/512px-MobileFrontend_bytes-added.svg.png"
+    },
+    remove: {
+        color: 0xDD3333,
+        icon_url: "https://upload.wikimedia.org/wikipedia/commons/thumb/7/7c/MobileFrontend_bytes-removed.svg/512px-MobileFrontend_bytes-removed.svg.png"
+    },
+    zero: {
+        color: 0x72777D,
+        icon_url: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/25/MobileFrontend_bytes-neutral.svg/512px-MobileFrontend_bytes-neutral.svg.png"
+    },
+    log: {
+        color: 0x3066CD,
+        icon_url: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ec/OOjs_UI_icon_information-progressive.svg/240px-OOjs_UI_icon_information-progressive.svg.png"
+    }
+};
 
 (async () => {
     const WEBHOOK = process.env.WEBHOOK;
@@ -148,7 +168,7 @@ function error(...args: any[]) {
 
             // Edit was not in filter list.
             (FILTERS.length > 0 && !FILTERS.includes(data.log_params.filter)) ||
-            
+
             // Already processed this event
             (savedLastEventId && JSON.parse(savedLastEventId)[0].offset == data.meta.offset)
         ) {
@@ -202,6 +222,9 @@ function error(...args: any[]) {
 
         const logRedirectUrl = `https://${data.meta.domain}/wiki/Special:AbuseLog/${data.log_params.log}`;
 
+        // Wait 1 second, just in case the revision isn't immediately available
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
         // Extract revision ID, which isn't in the log params for some reason
         const revIdUrl = new URL(apiUrl);
         revIdUrl.searchParams.set("format", "json");
@@ -225,34 +248,69 @@ function error(...args: any[]) {
                 return null;
             });
 
+        let newPage = false;
+        let diffSize: number | null = null;
+        if (revisionId) {
+            // Get the diff size
+            const diffUrl = new URL(apiUrl);
+            diffUrl.searchParams.set("format", "json");
+            diffUrl.searchParams.set("formatversion", "2");
+            diffUrl.searchParams.set("action", "compare");
+            diffUrl.searchParams.set("fromrev", `${revisionId}`);
+            diffUrl.searchParams.set("torelative", `prev`);
+            diffUrl.searchParams.set("prop", "ids|diffsize");
+            diffSize = await fetch(diffUrl, { headers: { "User-Agent": USER_AGENT } })
+                .then(r => r.json())
+                .then(json => {
+                    newPage = !(json as any)?.compare?.fromrevid;
+                    return (json as any)?.compare?.diffsize;
+                 });
+        }
+
         const pageUrl = `https://${data.meta.domain}/wiki/${encodeURIComponent(data.title.replace(/ /g, "_"))}`;
         const diffUrl = revisionId ? (`https://${data.meta.domain}/wiki/Special:Diff/${revisionId}`) : null;
         const histUrl = `https://${data.meta.domain}/wiki/Special:PageHistory/${encodeURIComponent(data.title.replace(/ /g, "_"))}`;
 
         const leadingLinks = [
+            diffUrl ? `[${newPage ? "new" : "diff"}](${diffUrl})` : null,
+            `[hist](${histUrl})`,
             `[log](${logRedirectUrl})`,
-            diffUrl ? `[diff](${diffUrl})` : null,
-            `[hist](${histUrl})`
         ].filter(x => x !== null).join(" | ");
 
-        let embedDescription = `(${leadingLinks}) . . (${data.log_type} . . ${data.log_action})`;
+        let embedDescription = `(${leadingLinks}) . . ${
+            (diffSize && Math.abs(diffSize) >= 500) ? '**' : ''
+        }(${
+            diffSize ?
+                `${Math.sign(diffSize) == 1 ? "+" : ""}${diffSize.toLocaleString()}` :
+                `${data.log_type} . . ${data.log_action}`
+        })${
+            (diffSize && Math.abs(diffSize) >= 500) ? '**' : ''
+        }`;
         if (comment) {
             embedDescription += ` . . *(${comment})*`;
         }
+
+        const mode = diffSize == null ? "log" : {
+            1: "add",
+            [-1]: "remove",
+            0: "zero"
+        }[Math.sign(diffSize)]
 
         postQueue.push({
             embeds: [
                 {
                     id: 652627557,
                     description: embedDescription,
-                    color: 4156110,
+                    color: embed[mode].color,
                     author: {
-                        icon_url: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ec/OOjs_UI_icon_information-progressive.svg/240px-OOjs_UI_icon_information-progressive.svg.png",
+                        icon_url: embed[mode].icon_url,
                         name: `${data.title}`,
                         url: pageUrl
                     },
                     footer: {
-                        text: new Date(data.timestamp * 1000).toLocaleString("en-US", { dateStyle: "long", timeStyle: "long", timeZone: "UTC" })
+                        text: `#${
+                            data.log_params!.filter
+                        } | ${new Date(data.timestamp * 1000).toLocaleString("en-US", { dateStyle: "long", timeStyle: "long", timeZone: "UTC" })}`
                     }
                 }
             ],
