@@ -1,5 +1,5 @@
 {
-  "name": "afc-discord",
+  "name": "edit-filter-discord-webhook",
   "dependencies": {
     "wikimedia-streams": "^3.0.0"
   },

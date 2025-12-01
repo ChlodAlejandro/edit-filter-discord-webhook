@@ -1,5 +1,5 @@
 /**
- * AFC Filter Discord webhook notifier
+ * Edit Filter Discord Webhook notifier
  * 
  * `npm i wikimedia-streams`
  * 
