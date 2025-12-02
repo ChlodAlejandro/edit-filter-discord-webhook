@@ -1,2 +1,3 @@
 lastEventId.txt
 node_modules/
+.env
