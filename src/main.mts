@@ -27,7 +27,6 @@
 import WikimediaStream from "wikimedia-streams";
 import type { WikimediaEventStreamEventTypes } from "wikimedia-streams";
 import * as fs from "fs/promises";
-import { diff } from "util";
 
 function log(...args: any[]) {
     console.log(`[${new Date().toISOString()}]`, ...args);
