@@ -250,6 +250,7 @@ const embed = {
 
         let newPage = false;
         let diffSize: number | null = null;
+        let diffComment: string | null = null;
         if (revisionId) {
             // Get the diff size
             const diffUrl = new URL(apiUrl);
@@ -258,12 +259,23 @@ const embed = {
             diffUrl.searchParams.set("action", "compare");
             diffUrl.searchParams.set("fromrev", `${revisionId}`);
             diffUrl.searchParams.set("torelative", `prev`);
-            diffUrl.searchParams.set("prop", "ids|diffsize");
-            diffSize = await fetch(diffUrl, { headers: { "User-Agent": USER_AGENT } })
+            diffUrl.searchParams.set("prop", "ids|size|comment");
+            [diffSize, diffComment] = await fetch(diffUrl, { headers: { "User-Agent": USER_AGENT } })
                 .then(r => r.json())
                 .then(json => {
+                    if ((json as any)?.warnings) {
+                        warn("API returned warnings for diff of revision", revisionId, ":", (json as any).warnings);
+                    }
                     newPage = !(json as any)?.compare?.fromrevid;
-                    return (json as any)?.compare?.tosize - (json as any)?.compare?.fromsize;
+                    return [
+                        (json as any)?.compare?.tosize - (json as any)?.compare?.fromsize,
+                        (json as any)?.compare?.tocomment ?? null
+                    ];
+                 })
+                 .catch(() => {
+                    error("Failed to get diff size for revision", revisionId);
+                    newPage = false;
+                    return [null, null];
                  });
         }
 
@@ -278,23 +290,27 @@ const embed = {
         ].filter(x => x !== null).join(" | ");
 
         let embedDescription = `(${leadingLinks}) . . ${
-            (diffSize && Math.abs(diffSize) >= 500) ? '**' : ''
+            (diffSize != null && Math.abs(diffSize) >= 500) ? '**' : ''
         }(${
-            diffSize ?
+            diffSize != null ?
                 `${Math.sign(diffSize) == 1 ? "+" : ""}${diffSize.toLocaleString()}` :
                 `${data.log_type} . . ${data.log_action}`
         })${
-            (diffSize && Math.abs(diffSize) >= 500) ? '**' : ''
+            (diffSize != null && Math.abs(diffSize) >= 500) ? '**' : ''
         }`;
         if (comment) {
             embedDescription += ` . . *(${comment})*`;
         }
+        if (diffComment) {
+            embedDescription += ` . . *(${diffComment})*`;
+        }
 
-        const mode = diffSize == null ? "log" : {
-            1: "add",
-            [-1]: "remove",
-            0: "zero"
-        }[Math.sign(diffSize)]
+        const mode = diffSize == null ?
+            "log" : (newPage ? "add" : {
+                1: "add",
+                [-1]: "remove",
+                0: "zero"
+            }[Math.sign(diffSize)])
 
         postQueue.push({
             embeds: [
