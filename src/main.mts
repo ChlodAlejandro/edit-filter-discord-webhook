@@ -267,7 +267,7 @@ const embed = {
                     }
                     newPage = !(json as any)?.compare?.fromrevid;
                     return [
-                        (json as any)?.compare?.tosize - (json as any)?.compare?.fromsize,
+                        (json as any)?.compare?.tosize - ((json as any)?.compare?.fromsize ?? 0),
                         (json as any)?.compare?.tocomment ?? null
                     ];
                  })
