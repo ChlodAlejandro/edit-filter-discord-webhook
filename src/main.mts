@@ -263,7 +263,12 @@ const embed = {
                 .then(r => r.json())
                 .then(json => {
                     if ((json as any)?.warnings) {
-                        warn("API returned warnings for diff of revision", revisionId, ":", (json as any).warnings);
+                        if (
+                            ((json as any).warnings?.compare ?? []).length !== 1 ||
+                            !(json as any).warnings.compare[0].warnings.includes("is the earliest revision")
+                        ) {
+                            warn("API returned warnings for diff of revision", revisionId, ":", (json as any).warnings);
+                        }
                     }
                     newPage = !(json as any)?.compare?.fromrevid;
                     return [
@@ -301,7 +306,7 @@ const embed = {
             embedDescription += ` . . *(${comment})*`;
         }
         if (diffComment) {
-            embedDescription += ` . . *(${diffComment})*`;
+            embedDescription += ` . . *(${wikitextCommentToMarkdown(data, diffComment)})*`;
         }
 
         const mode = diffSize == null ?
