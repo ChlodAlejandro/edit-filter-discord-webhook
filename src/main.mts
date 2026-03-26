@@ -148,14 +148,16 @@ const embed = {
         reopenOnClose: true
     });
 
-    async function saveLastEventId(data) {
+    async function saveLastEventId(data, silent = false) {
         const lastEventId = JSON.stringify([{
             topic: data.meta.topic,
             partition: data.meta.partition,
             offset: data.meta.offset,
         }]);
         savedLastEventId = lastEventId;
-        console.log("Saving last event ID:", lastEventId);
+        if (!silent) {
+            console.log("Saving last event ID:", lastEventId);
+        }
         // Save the last event ID to a file
         await fs.writeFile(LAST_EVENT_ID_FILE, lastEventId, "utf-8")
             .catch((err) => {
@@ -187,11 +189,10 @@ const embed = {
         ) {
             // Save the event ID even if we're not processing it, to avoid reprocessing old events on restart.
             // This helps us recover from long-term outages.
-            if (sinceLastEventIdSave > 100) {
-                await saveLastEventId(data);
-                sinceLastEventIdSave = 0;
-            } else {
-                sinceLastEventIdSave++;
+            if (sinceLastEventIdSave > Date.now() + (60e3)) {
+                // Save every minute.
+                await saveLastEventId(data, true);
+                sinceLastEventIdSave = Date.now();
             }
             return;
         }
