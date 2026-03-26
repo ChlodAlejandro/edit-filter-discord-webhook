@@ -148,6 +148,22 @@ const embed = {
         reopenOnClose: true
     });
 
+    async function saveLastEventId(data) {
+        const lastEventId = JSON.stringify([{
+            topic: data.meta.topic,
+            partition: data.meta.partition,
+            offset: data.meta.offset,
+        }]);
+        console.log("Saving last event ID: ", lastEventId);
+        // Save the last event ID to a file
+        await fs.writeFile(LAST_EVENT_ID_FILE, lastEventId, "utf-8")
+            .catch((err) => {
+                error("Failed to save last event ID:", err);
+            });
+    }
+
+    let sinceLastEventIdSave = 0;
+
     stream.on("mediawiki.recentchange", async (data) => {
         if (
             // Not English Wikipedia
@@ -168,6 +184,14 @@ const embed = {
             // Already processed this event
             (savedLastEventId && JSON.parse(savedLastEventId)[0].offset == data.meta.offset)
         ) {
+            // Save the event ID even if we're not processing it, to avoid reprocessing old events on restart.
+            // This helps us recover from long-term outages.
+            if (sinceLastEventIdSave > 100) {
+                await saveLastEventId(data);
+                sinceLastEventIdSave = 0;
+            } else {
+                sinceLastEventIdSave++;
+            }
             return;
         }
 
@@ -335,15 +359,7 @@ const embed = {
             username: "English Wikipedia"
         });
 
-        // Save the last event ID to a file
-        await fs.writeFile(LAST_EVENT_ID_FILE, JSON.stringify([{
-            topic: data.meta.topic,
-            partition: data.meta.partition,
-            offset: data.meta.offset,
-        }]), "utf-8")
-            .catch((err) => {
-                error("Failed to save last event ID:", err);
-            });
+        await saveLastEventId(data);
     });
 
     stream.on("open", () => {
