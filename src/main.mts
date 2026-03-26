@@ -145,7 +145,7 @@ const embed = {
 
     const stream = new WikimediaStream("mediawiki.recentchange", {
         autoStart: false,
-        reopenOnClose: true
+        reopenOnClose: false
     });
 
     async function saveLastEventId(data, silent = false) {
@@ -165,7 +165,7 @@ const embed = {
             });
     }
 
-    let sinceLastEventIdSave = 0;
+    let nextLastEventIdSave = 0;
 
     stream.on("mediawiki.recentchange", async (data) => {
         if (
@@ -187,12 +187,13 @@ const embed = {
             // Already processed this event
             (savedLastEventId && JSON.parse(savedLastEventId)[0].offset == data.meta.offset)
         ) {
+            console.log(data.meta.offset);
             // Save the event ID even if we're not processing it, to avoid reprocessing old events on restart.
             // This helps us recover from long-term outages.
-            if (sinceLastEventIdSave > Date.now() + (60e3)) {
+            if (Date.now() > nextLastEventIdSave) {
                 // Save every minute.
-                await saveLastEventId(data, true);
-                sinceLastEventIdSave = Date.now();
+                await saveLastEventId(data, false);
+                nextLastEventIdSave = Date.now() + (60e3);
             }
             return;
         }
