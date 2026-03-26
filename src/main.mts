@@ -135,7 +135,7 @@ const embed = {
             .trim();
     }
 
-    const savedLastEventId = await fs.readFile(LAST_EVENT_ID_FILE, "utf-8")
+    let savedLastEventId = await fs.readFile(LAST_EVENT_ID_FILE, "utf-8")
         .then(data => data.trim())
         .catch(() => null);
 
@@ -154,7 +154,8 @@ const embed = {
             partition: data.meta.partition,
             offset: data.meta.offset,
         }]);
-        console.log("Saving last event ID: ", lastEventId);
+        savedLastEventId = lastEventId;
+        console.log("Saving last event ID:", lastEventId);
         // Save the last event ID to a file
         await fs.writeFile(LAST_EVENT_ID_FILE, lastEventId, "utf-8")
             .catch((err) => {
