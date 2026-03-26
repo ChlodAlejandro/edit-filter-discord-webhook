@@ -144,9 +144,6 @@ const embed = {
     }
 
     const stream = new WikimediaStream("mediawiki.recentchange", {
-        headers: {
-            'User-Agent': USER_AGENT
-        },
         autoStart: false,
         reopenOnClose: true
     });
@@ -380,6 +377,9 @@ const embed = {
     });
 
     await stream.open({
-        lastEventId: savedLastEventId ? JSON.parse(savedLastEventId) : undefined
+        lastEventId: savedLastEventId ? JSON.parse(savedLastEventId) : undefined,
+        headers: {
+            'User-Agent': USER_AGENT
+        },
     });
 })();
