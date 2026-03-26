@@ -66,7 +66,7 @@ const embed = {
     }
 
     const FILTERS = process.env.FILTERS?.split(",") ?? [];
-    const USER_AGENT = process.env.USER_AGENT ?? `AFCDiscordWebhook/1.0 (User:Chlod; chlod@chlod.net) ${WikimediaStream.genericUserAgent}}`;
+    const USER_AGENT = process.env.USER_AGENT ?? `AFCDiscordWebhook/1.1 (User:Chlod; chlod@chlod.net) ${WikimediaStream.genericUserAgent}`;
     const LAST_EVENT_ID_FILE = process.env.LAST_EVENT_ID_FILE ?? `${process.cwd()}/lastEventId.txt`;
 
     log("Starting...");
