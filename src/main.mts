@@ -27,6 +27,7 @@
 import WikimediaStream from "wikimedia-streams";
 import type { WikimediaEventStreamEventTypes } from "wikimedia-streams";
 import * as fs from "fs/promises";
+import MediaWikiRecentChangeEvent from "wikimedia-streams/dist/types/streams/MediaWikiRecentChangeEvent";
 
 function log(...args: any[]) {
     console.log(`[${new Date().toISOString()}]`, ...args);
@@ -41,19 +42,19 @@ function error(...args: any[]) {
 const embed = {
     add: {
         color: 0x00AF89,
-        icon_url: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/ab/MobileFrontend_bytes-added.svg/512px-MobileFrontend_bytes-added.svg.png"
+        icon_url: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/ab/MobileFrontend_bytes-added.svg/500px-MobileFrontend_bytes-added.svg.png"
     },
     remove: {
         color: 0xDD3333,
-        icon_url: "https://upload.wikimedia.org/wikipedia/commons/thumb/7/7c/MobileFrontend_bytes-removed.svg/512px-MobileFrontend_bytes-removed.svg.png"
+        icon_url: "https://upload.wikimedia.org/wikipedia/commons/thumb/7/7c/MobileFrontend_bytes-removed.svg/500px-MobileFrontend_bytes-removed.svg.png"
     },
     zero: {
         color: 0x72777D,
-        icon_url: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/25/MobileFrontend_bytes-neutral.svg/512px-MobileFrontend_bytes-neutral.svg.png"
+        icon_url: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/25/MobileFrontend_bytes-neutral.svg/500px-MobileFrontend_bytes-neutral.svg.png"
     },
     log: {
         color: 0x3066CD,
-        icon_url: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ec/OOjs_UI_icon_information-progressive.svg/240px-OOjs_UI_icon_information-progressive.svg.png"
+        icon_url: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ec/OOjs_UI_icon_information-progressive.svg/500px-OOjs_UI_icon_information-progressive.svg.png"
     }
 };
 
@@ -85,7 +86,7 @@ const embed = {
         while (postQueue.length > 0) {
             postLock = true;
             const nextPost = postQueue.shift()!;
-            await fetch(WEBHOOK, {
+            await fetch(WEBHOOK!, {
                 method: "POST",
                 headers: {
                     'Content-Type': 'application/json',
@@ -148,7 +149,7 @@ const embed = {
         reopenOnClose: false
     });
 
-    async function saveLastEventId(data, silent = false) {
+    async function saveLastEventId(data: MediaWikiRecentChangeEvent, silent = false) {
         const lastEventId = JSON.stringify([{
             topic: data.meta.topic,
             partition: data.meta.partition,
@@ -338,7 +339,7 @@ const embed = {
                 1: "add",
                 [-1]: "remove",
                 0: "zero"
-            }[Math.sign(diffSize)])
+            }[Math.sign(diffSize) as -1 | 0 | 1] as keyof typeof embed);
 
         postQueue.push({
             embeds: [
@@ -358,7 +359,7 @@ const embed = {
                     }
                 }
             ],
-            avatar_url: "https://upload.wikimedia.org/wikipedia/en/thumb/8/80/Wikipedia-logo-v2.svg/263px-Wikipedia-logo-v2.svg.png",
+            avatar_url: "https://upload.wikimedia.org/wikipedia/en/thumb/8/80/Wikipedia-logo-v2.svg/250px-Wikipedia-logo-v2.svg.png",
             username: "English Wikipedia"
         });
 
@@ -371,7 +372,7 @@ const embed = {
 
     stream.on("error", (err) => {
         error("Stream error:", err);
-        if (err.message.includes("Too Many Requests")) {
+        if (err.message?.includes("Too Many Requests")) {
             warn("Rate limited; waiting 60 seconds before reopening stream...");
             setTimeout(async () => {
                 log("Reopening stream after rate limit...");
