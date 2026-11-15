@@ -192,9 +192,10 @@ const embed = {
             // Save the event ID even if we're not processing it, to avoid reprocessing old events on restart.
             // This helps us recover from long-term outages.
             if (Date.now() > nextLastEventIdSave) {
-                // Save every minute.
-                await saveLastEventId(data, false);
+                // Save every minute. Note that we set this before saving, so that multiple events
+                // in a short time don't cause multiple saves.
                 nextLastEventIdSave = Date.now() + (60e3);
+                await saveLastEventId(data, false);
             }
             return;
         }
