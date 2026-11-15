@@ -157,7 +157,7 @@ const embed = {
         }]);
         savedLastEventId = lastEventId;
         if (!silent) {
-            console.log("Saving last event ID:", lastEventId);
+            log("Saving last event ID:", lastEventId);
         }
         // Save the last event ID to a file
         await fs.writeFile(LAST_EVENT_ID_FILE, lastEventId, "utf-8")
