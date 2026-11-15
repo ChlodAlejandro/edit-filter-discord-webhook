@@ -188,7 +188,7 @@ const embed = {
             // Already processed this event
             (savedLastEventId && JSON.parse(savedLastEventId)[0].offset == data.meta.offset)
         ) {
-            console.log(data.meta.offset);
+            // console.log(data.meta.offset);
             // Save the event ID even if we're not processing it, to avoid reprocessing old events on restart.
             // This helps us recover from long-term outages.
             if (Date.now() > nextLastEventIdSave) {
